@@ -25,7 +25,7 @@ def get_variables():
         'spaceone_paragraph_5': '赞。',  # 自定义段落5
         'spaceone_offerings': '「一场」Space One',  # 产品
         'spaceone_cost': '39999',  # 费用
-        'spaceone_current——time': datetime.now().strftime('%Y年%m月%d日'),  # 当前时间
+        'spaceone_current_time': datetime.now().strftime('%Y年%m月%d日'),  # 当前时间
         'spaceone_fees_Deadline': (datetime.now(pytz.timezone('Asia/Shanghai')) + timedelta(days=3)).strftime('%Y年%m月%d日'),  # 付款截止时间（当前北京时间+3天）
         'spaceone_member_start': '2025年8月24日',  # 会员开始时间
         'spaceone_member_start_1': '2025年8月25日',  # 会员开始时间（入场式第二天）
@@ -36,6 +36,7 @@ def get_variables():
 
 # 获取邮件变量
 variables = get_variables()
+
 
 # 读取 Markdown 文件并替换占位符
 with open('邮件内容.md', 'r', encoding='utf-8') as f:
@@ -64,23 +65,23 @@ SMTP_USER = os.getenv('SMTP_USER', 'space-one@qq.com')
 SMTP_PASSWORD = os.getenv('SMTP_PASSWORD', 'eudyjptmnvjffbec')
 
 # 邮件收件人和主题
-recipient = 'csy060303@gmail.com'
+mail_recipient = 'chenswonderland123@gmail.com'
 subject = '「一场+」Space One 视频沟通结果通知'
 
-def send_email(html_content, plain_text, recipient, subject):
+def send_email(html_content, plain_text, mail_recipient, subject):
     """发送单个邮件
     
     Args:
         html_content (str): HTML格式的邮件内容
         plain_text (str): 纯文本格式的邮件内容
-        recipient (str): 收件人邮箱地址
+        mail_recipient (str): 收件人邮箱地址
         subject (str): 邮件主题
     """
     # 创建多部分邮件
     msg = MIMEMultipart('alternative')
     msg['Subject'] = subject
     msg['From'] = SMTP_USER
-    msg['To'] = recipient
+    msg['To'] = mail_recipient
 
     # 添加纯文本和HTML内容
     msg.attach(MIMEText(plain_text, 'plain', 'utf-8'))
@@ -103,11 +104,11 @@ def send_email(html_content, plain_text, recipient, subject):
         context = ssl.create_default_context()
         server = smtplib.SMTP_SSL(SMTP_SERVER, 465, context=context)
         server.login(SMTP_USER, SMTP_PASSWORD)
-        server.sendmail(SMTP_USER, recipient, msg.as_string())
+        server.sendmail(SMTP_USER, mail_recipient, msg.as_string())
         server.quit()
         print("邮件发送成功!")
     except Exception as e:
         print("邮件发送错误:", str(e))
 
 # 发送邮件
-send_email(inlined_html, plain_text, recipient, subject)
+send_email(inlined_html, plain_text, mail_recipient, subject)
