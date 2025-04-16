@@ -10,6 +10,8 @@ from email.mime.base import MIMEBase
 from email import encoders
 from datetime import datetime, timedelta
 import pytz
+import re
+from picture import making_tickets  # 新增导入 making_tickets
 
 app = Flask(__name__)
 
@@ -48,7 +50,7 @@ def get_variables_from_request(data):
     variables['spaceone_membership_end'] = data.get('spaceone_membership_end')
     return variables
 
-def send_email(html_content, plain_text, mail_recipient, subject):
+def send_email(html_content, plain_text, mail_recipient, subject, extra_attachments=None):
     """
     根据生成的邮件内容，利用 SMTP 发送邮件。
 
@@ -57,6 +59,7 @@ def send_email(html_content, plain_text, mail_recipient, subject):
         plain_text (str): 纯文本格式邮件内容
         mail_recipient (str): 收件人邮箱
         subject (str): 邮件主题
+        extra_attachments (list): 额外的附件路径列表
     """
     # 从环境变量获取 SMTP 配置，如果环境变量中无配置则使用默认值
     SMTP_SERVER = os.getenv('SMTP_SERVER', 'smtp.qq.com')
@@ -74,7 +77,9 @@ def send_email(html_content, plain_text, mail_recipient, subject):
     msg.attach(MIMEText(html_content, 'html', 'utf-8'))
     
     # 添加附件
-    attachment_paths = ['./image/小助手企业微信.jpeg', './image/邀请函.jpg']
+    attachment_paths = ['./image/小助手企业微信.jpeg']
+    if extra_attachments:
+        attachment_paths += extra_attachments
     for attachment_path in attachment_paths:
         if os.path.exists(attachment_path):
             with open(attachment_path, 'rb') as f:
@@ -158,8 +163,18 @@ def handle_send_email():
     inlined_html = transform(html_with_css)
     step_status['内联 CSS'] = '成功'
 
-    # 附件预检查：检查附件是否存在
-    attachment_paths = ['./image/小助手企业微信.jpeg', './image/邀请函.jpg']
+    # 调用 making_tickets 制作入场券图片，并构造附件路径
+    ticket_in_time =  variables.get('spaceone_member_start')
+    ticket_in_time_full = variables.get('spaceone_member_start')
+    m = re.match(r'(\d+年\d+月)', ticket_in_time_full)
+    ticket_in_time = m.group(1) if m else ticket_in_time_full
+    ticket_in_period =  variables.get('spaceone_phase')[0]
+    ticket_interviewer_name = variables.get('spaceone_name')
+    making_tickets(ticket_in_time, ticket_in_period, ticket_interviewer_name)
+    ticket_attachment = f'./image/学员入场劵/{ticket_in_period}期入场券-{ticket_interviewer_name}.png'
+
+    # 附件预检查：检查附件是否存在（包含入场券图片）
+    attachment_paths = ['./image/小助手企业微信.jpeg', ticket_attachment]
     missing_attachments = [path for path in attachment_paths if not os.path.exists(path)]
     if missing_attachments:
         step_status['附件检查'] = f"错误: 未找到附件 {missing_attachments}"
@@ -172,8 +187,8 @@ def handle_send_email():
 
     subject = '「一场+」Space One 视频沟通结果通知'
     
-    # 调用 send_email 函数发送邮件
-    success, send_status = send_email(inlined_html, plain_text, mail_recipient, subject)
+    # 调用 send_email 时传入入场券图片附件
+    success, send_status = send_email(inlined_html, plain_text, mail_recipient, subject, extra_attachments=[ticket_attachment])
     step_status['邮件发送'] = '成功' if success else f'错误: {send_status}'
 
     if success:
