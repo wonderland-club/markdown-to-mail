@@ -8,7 +8,7 @@
 
 ```mermaid
 graph TD
-    A[客户端] -->|POST请求| B[Flask服务器]
+    A[客户端/多维表格] -->|POST请求| B[Flask服务器]
     B -->|1. 解析请求| C[变量提取]
     C -->|2. 替换变量| D[Markdown模板处理]
     D -->|3. 转换| E[HTML生成]
