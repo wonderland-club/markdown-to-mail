@@ -66,9 +66,17 @@ def handle_send_email():
     ticket_in_period = variables.get('spaceone_phase')[0]
     ticket_interviewer_name = variables.get('spaceone_name')
     
-    # 生成入场券
-    making_tickets(ticket_in_time, ticket_in_period, ticket_interviewer_name)
+    # 构造入场券文件路径
     ticket_attachment = f'{IMAGE_CONFIG["ticket_output_dir"]}{ticket_in_period}期入场券-{ticket_interviewer_name}.png'
+    
+    # 检查入场券是否已存在，不存在才生成
+    if not os.path.exists(ticket_attachment):
+        # 生成入场券
+        making_tickets(ticket_in_time, ticket_in_period, ticket_interviewer_name)
+        print(f"生成新入场券: {ticket_attachment}")
+    else:
+        print(f"入场券已存在，跳过生成: {ticket_attachment}")
+
 
     # 附件预检查：检查附件是否存在（包含入场券图片）
     attachment_paths = [ticket_attachment]+EMAIL_CONFIG['default_attachments']

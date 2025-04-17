@@ -53,4 +53,4 @@ def making_tickets(in_time, in_period, interviewer_name):
     image.save(output_path)
     print("图片处理完成")
     
-making_tickets('2025年05月', '五', '曹文杰')
+# making_tickets('2025年05月', '五', '曹文杰')
