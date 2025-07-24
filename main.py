@@ -32,15 +32,12 @@ def handle_send_email():
         return jsonify({"success": False, "message": "请求体为空或不是有效的 JSON", "step_status": step_status}), 400
     step_status['获取信息'] = '成功'
     
-    # 检查必须的参数
-    required_fields = ["mail_recipient", "spaceone_name", "spaceone_phase", "spaceone_member_start"]
-    for field in required_fields:
-        if not data.get(field):
-            step_status[f'检查 {field}'] = f'错误: 缺少 {field} 参数'
-            return jsonify({"success": False, "message": f"缺少必需的参数: {field}", "step_status": step_status}), 400
-        step_status[f'检查 {field}'] = '成功'
-
+    # 检查必须的参数 mail_recipient
     mail_recipient = data.get("mail_recipient")
+    if not mail_recipient:
+        step_status['检查 mail_recipient'] = '错误: 缺少 mail_recipient 参数'
+        return jsonify({"success": False, "message": "缺少 mail_recipient 参数", "step_status": step_status}), 400
+    step_status['检查 mail_recipient'] = '成功'
     
     # 根据请求数据生成变量字典
     variables = get_variables_from_request(data)
@@ -62,31 +59,27 @@ def handle_send_email():
     step_status['Markdown 转 HTML'] = '成功'
     step_status['内联 CSS'] = '成功'
 
-    # 生成并检查入场券
-    try:
-        email_prefix = mail_recipient.split('@')[0]
-        unique_image_name = f"{variables['spaceone_phase']}期入场券-{variables['spaceone_name']}-{email_prefix}.png"
-        ticket_image_path = os.path.join(IMAGE_CONFIG['ticket_output_dir'], unique_image_name)
-        
-        if not os.path.exists(ticket_image_path):
-            # 从 variables 中获取月份信息
-            start_date_str = data.get('spaceone_member_start') # "2025/05/01"
-            dt_object = datetime.strptime(start_date_str, DATE_FORMAT['input'])
-            month_only_str = dt_object.strftime(DATE_FORMAT['month_only']) # "2025年05月"
-            
-            making_tickets(
-                month_only_str,
-                variables['spaceone_phase'], 
-                variables['spaceone_name'], 
-                mail_recipient
-            )
-        step_status['生成入场券'] = '成功'
-    except Exception as e:
-        step_status['生成入场券'] = f'错误: {e}'
-        return jsonify({"success": False, "message": f"生成入场券失败: {e}", "step_status": step_status}), 500
+    # 调用 making_tickets 制作入场券图片，并构造附件路径
+    ticket_in_time_full = variables.get('spaceone_member_start')
+    m = re.match(r'(\d+年\d+月)', ticket_in_time_full)
+    ticket_in_time = m.group(1) if m else ticket_in_time_full
+    ticket_in_period = variables.get('spaceone_phase')[0]
+    ticket_interviewer_name = variables.get('spaceone_name')
+    
+    # 构造入场券文件路径
+    ticket_attachment = f'{IMAGE_CONFIG["ticket_output_dir"]}{ticket_in_period}期入场券-{ticket_interviewer_name}.png'
+    
+    # 检查入场券是否已存在，不存在才生成
+    if not os.path.exists(ticket_attachment):
+        # 生成入场券
+        making_tickets(ticket_in_time, ticket_in_period, ticket_interviewer_name)
+        print(f"生成新入场券: {ticket_attachment}")
+    else:
+        print(f"入场券已存在，跳过生成: {ticket_attachment}")
 
-    # 附件预检查：检查附件是否存在
-    attachment_paths = EMAIL_CONFIG['default_attachments'] + [ticket_image_path]
+
+    # 附件预检查：检查附件是否存在（包含入场券图片）
+    attachment_paths = [ticket_attachment]+EMAIL_CONFIG['default_attachments']
     missing_attachments = [path for path in attachment_paths if not os.path.exists(path)]
     if missing_attachments:
         step_status['附件检查'] = f"错误: 未找到附件 {missing_attachments}"

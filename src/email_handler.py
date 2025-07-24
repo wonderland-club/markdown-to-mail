@@ -8,12 +8,12 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
-import markdown2
+import pypandoc
 from premailer import transform
 from datetime import datetime, timedelta
 import pytz
 import re
-from config import SMTP_CONFIG, EMAIL_CONFIG, DATE_FORMAT, EMAIL_STYLE_CONFIG
+from config import SMTP_CONFIG, EMAIL_CONFIG, DATE_FORMAT
 
 def get_variables_from_request(data):
     """
@@ -23,7 +23,6 @@ def get_variables_from_request(data):
     variables = {}
     # 使用请求数据中的变量，或使用默认值
     variables['spaceone_name'] = data.get('spaceone_name')
-    print(variables['spaceone_name'])
     variables['spaceone_phase'] = data.get('spaceone_phase')
     variables['spaceone_paragraph'] = data.get('spaceone_paragraph')
     variables['spaceone_offerings'] = data.get('spaceone_offerings')
@@ -75,11 +74,20 @@ def convert_to_html(md_text):
     将Markdown文本转换为HTML并内联CSS
     """
     try:
-        # 使用 markdown2 进行转换
-        html_content = markdown2.markdown(md_text)
+        html_content = pypandoc.convert_text(md_text, 'html', format='md')
         
         # 内联 CSS 样式
-        html_with_css = f"<style>{EMAIL_STYLE_CONFIG['basic_css']}</style>{html_content}"
+        basic_css = """
+        body {     font-family: Arial, sans-serif;     font-size: 14px;     line-height: 1.6;     color: black !important; } 
+        h1, h2, h3 {     color: black; } 
+        p {     margin: 10px 0; } 
+        ul, ol {     margin: 10px 0;     padding-left: 20px; } 
+        code {     padding: 2px 4px;     border-radius: 3px; } 
+        a:link, a:visited {     color: black;     text-decoration: none; } 
+        a:hover {     color: black; } 
+        .im {     color: black !important;     font-family: Arial, sans-serif;     font-size: 14px;     line-height: 1.6; }
+        """
+        html_with_css = f"<style>{basic_css}</style>{html_content}"
         inlined_html = transform(html_with_css)
         
         return inlined_html, None
