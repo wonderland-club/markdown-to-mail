@@ -8,10 +8,14 @@ def draw_bold_text(draw, text, position, font, fill, offsets):
         pos = (position[0] + offset[0], position[1] + offset[1])
         draw.text(pos, text, font=font, fill=fill)
 
-def making_tickets(in_time, in_period, interviewer_name):
+def making_tickets(in_time, in_period, interviewer_name, mail_recipient):
+    # 从邮箱地址中提取一个唯一的部分，例如'user' from 'user@example.com'
+    email_prefix = mail_recipient.split('@')[0]
+    unique_image_name = f"{in_period}期入场券-{interviewer_name}-{email_prefix}.png"
+
     # 加载图片
     image_path = IMAGE_CONFIG['ticket_template_path']
-    output_path = rf'{IMAGE_CONFIG["ticket_output_dir"]}{in_period}期入场券-{interviewer_name}.png'
+    output_path = rf'{IMAGE_CONFIG["ticket_output_dir"]}{unique_image_name}'
     image = Image.open(image_path)
 
     # 设置字体
